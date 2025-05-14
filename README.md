@@ -64,7 +64,7 @@
 
 ## 开发
 
-1. 安装 Deno：���问 https://deno.land/#installation
+1. 安装 Deno： https://deno.land/#installation
 2. 克隆项目并进入目录
 3. 复制 `.env.example` 为 `.env` 并配置环境变量
 4. 运行 `deno run --allow-net --allow-env --allow-read main.ts`
