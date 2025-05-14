@@ -5,8 +5,6 @@ const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
 const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
 
 // const env = await dotenvConfig({ export: true });
-
-
 // const VERTEX_AI_API_KEY = env.VERTEX_AI_API_KEY;
 // const PROXY_API_KEY = env.PROXY_API_KEY;
 
@@ -45,14 +43,6 @@ interface ChatCompletionRequest {
 const app = new Application();
 const router = new Router();
 
-// 添加请求体解析中间件
-app.use(async (ctx, next) => {
-  if (ctx.request.hasBody) {
-    ctx.request.body({ type: "json" });
-  }
-  await next();
-});
-
 // 辅助函数
 interface VertexAIChunk {
   candidates: {
@@ -70,6 +60,12 @@ function parseChunkText(chunk: unknown): string | null {
     return null;
   }
 }
+
+router.get("/", (ctx: Context) => {
+  ctx.response.body = {
+    message: "Hello, World!",
+  };
+});
 
 // 主接口
 router.post("/v1/chat/completions", async (ctx: Context) => {
@@ -114,6 +110,15 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
     }
   }
 
+  // 检查是否还有剩余的系统消息，如果有则添加为单独的用户消息
+  if (systemMessage) {
+    vertexAiContents.push({
+      role: "user",
+      parts: [{ text: systemMessage }],
+    });
+    systemMessage = "";
+  }
+
   // 构造请求体
   const vertexAiPayload = {
     contents: vertexAiContents,
@@ -141,7 +146,26 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
       }
 
       const result = await response.json();
-      const text = parseChunkText(result);
+
+      // 提取回答内容
+      let text = "";
+      let finish_reason = "stop";
+
+      if (result.candidates && result.candidates.length > 0) {
+        const parts = result.candidates[0].content.parts;
+        text = parts.map((part: { text?: string }) => part.text || "").join("");
+
+        // 处理finish_reason
+        const fr = result.candidates[0].finishReason;
+        if (fr === "MAX_OUTPUT_TOKENS") {
+          finish_reason = "length";
+        }
+      } else {
+        console.warn("Vertex AI 未返回有效的 candidates");
+      }
+
+      // 获取使用情况
+      const usage = result.usageMetadata || {};
 
       ctx.response.body = {
         id: crypto.randomUUID(),
@@ -155,13 +179,13 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
               role: "assistant",
               content: text,
             },
-            finish_reason: "stop",
+            finish_reason: finish_reason,
           },
         ],
         usage: {
-          prompt_tokens: -1,
-          completion_tokens: -1,
-          total_tokens: -1,
+          prompt_tokens: usage.promptTokenCount || -1,
+          completion_tokens: usage.candidatesTokenCount || -1,
+          total_tokens: usage.totalTokenCount || -1,
         },
       };
     } else {
@@ -236,8 +260,27 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
       ctx.response.body = body;
     }
   } catch (error) {
+    console.error("处理请求时发生错误:", error);
     ctx.response.status = 500;
-    ctx.response.body = { error: error instanceof Error ? error.message : "Unknown error" };
+
+    // 提供更详细的错误信息
+    if (error instanceof Error) {
+      ctx.response.body = {
+        error: {
+          message: error.message,
+          type: error.name,
+          detail: "请求Vertex AI API时发生错误，请检查API密钥和请求格式"
+        }
+      };
+    } else {
+      ctx.response.body = {
+        error: {
+          message: "未知错误",
+          type: "UnknownError",
+          detail: "处理请求时发生未知错误"
+        }
+      };
+    }
   }
 });
 
@@ -245,10 +288,11 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-const port = 6000;
-console.log(`服务器运行在 http://localhost:${port}`);
+const port = 8001;
+const hostname = "127.0.0.1";
+console.log(`服务器运行在 http://${hostname}:${port}`);
 try {
-  await app.listen({ port });
+  await app.listen({ port, hostname });
 } catch (error) {
   console.error("服务器启动失败:", error instanceof Error ? error.message : "未知错误");
   throw error;
