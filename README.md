@@ -42,7 +42,7 @@
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer 你的PROXY_API_KEY" \
     -d '{
-        "model": "gemini-pro",
+        "model": "gemini-2.5-pro-preview-05-06",
         "messages": [
             {"role": "user", "content": "你好！"}
         ],
