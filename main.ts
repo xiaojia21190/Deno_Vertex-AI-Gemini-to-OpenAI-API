@@ -1,14 +1,14 @@
 import { Application, Router, Context, dotenvConfig } from "./deps.ts";
 
 // 环境变量检查
-// const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
-// const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
+const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
+const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
 
-const env = await dotenvConfig({ export: true });
+// const env = await dotenvConfig({ export: true });
 
 
-const VERTEX_AI_API_KEY = env.VERTEX_AI_API_KEY;
-const PROXY_API_KEY = env.PROXY_API_KEY;
+// const VERTEX_AI_API_KEY = env.VERTEX_AI_API_KEY;
+// const PROXY_API_KEY = env.PROXY_API_KEY;
 
 if (!VERTEX_AI_API_KEY) {
   throw new Error("VERTEX_AI_API_KEY 环境变量没有设置哦！快去 .env 文件看看！");
