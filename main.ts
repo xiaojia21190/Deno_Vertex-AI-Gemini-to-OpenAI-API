@@ -1,11 +1,8 @@
-import { Application, Router, Context, dotenvConfig } from "./deps.ts";
-
-// 加载环境变量
-const env = await dotenvConfig({ export: true });
+import { Application, Router, Context } from "./deps.ts";
 
 // 环境变量检查
-const VERTEX_AI_API_KEY = env.VERTEX_AI_API_KEY;
-const PROXY_API_KEY = env.PROXY_API_KEY;
+const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
+const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
 
 if (!VERTEX_AI_API_KEY) {
   throw new Error("VERTEX_AI_API_KEY 环境变量没有设置哦！快去 .env 文件看看！");
@@ -233,7 +230,7 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-const port = 8000;
+const port = 6000;
 console.log(`服务器运行在 http://localhost:${port}`);
 try {
   await app.listen({ port });
