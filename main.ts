@@ -1,8 +1,14 @@
-import { Application, Router, Context } from "./deps.ts";
+import { Application, Router, Context, dotenvConfig } from "./deps.ts";
 
 // 环境变量检查
-const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
-const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
+// const VERTEX_AI_API_KEY = Deno.env.get("VERTEX_AI_API_KEY");
+// const PROXY_API_KEY = Deno.env.get("PROXY_API_KEY");
+
+const env = await dotenvConfig({ export: true });
+
+
+const VERTEX_AI_API_KEY = env.VERTEX_AI_API_KEY;
+const PROXY_API_KEY = env.PROXY_API_KEY;
 
 if (!VERTEX_AI_API_KEY) {
   throw new Error("VERTEX_AI_API_KEY 环境变量没有设置哦！快去 .env 文件看看！");
@@ -39,6 +45,14 @@ interface ChatCompletionRequest {
 const app = new Application();
 const router = new Router();
 
+// 添加请求体解析中间件
+app.use(async (ctx, next) => {
+  if (ctx.request.hasBody) {
+    ctx.request.body({ type: "json" });
+  }
+  await next();
+});
+
 // 辅助函数
 interface VertexAIChunk {
   candidates: {
@@ -68,7 +82,8 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
   }
 
   // 获取请求体
-  const request: ChatCompletionRequest = await ctx.request.body().value;
+  const bodyResult = ctx.request.body({ type: "json" });
+  const request: ChatCompletionRequest = await bodyResult.value;
 
   // 构造 Vertex AI HTTP payload
   const vertexAiEndpoint = `${VERTEX_AI_BASE_ENDPOINT}${request.model}:generateContent`;
