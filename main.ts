@@ -18,25 +18,18 @@ if (!PROXY_API_KEY) {
 // HTTP 反代时用到的基础 Endpoint
 const VERTEX_AI_BASE_ENDPOINT = "https://aiplatform.googleapis.com/v1/publishers/google/models/";
 
-// 类型定义
-interface Message {
+export interface ChatMessage {
   role: string;
   content: string;
 }
 
 interface ChatCompletionRequest {
   model: string;
-  messages: Message[];
-  temperature?: number;
-  top_p?: number;
-  n?: number;
+  messages: ChatMessage[];
   stream?: boolean;
-  stop?: string[] | null;
+  temperature?: number;
   max_tokens?: number;
-  presence_penalty?: number;
-  frequency_penalty?: number;
-  logit_bias?: Record<string, number> | null;
-  user?: string | null;
+  top_p?: number;
 }
 
 // 创建应用和路由
@@ -78,8 +71,7 @@ router.post("/v1/chat/completions", async (ctx: Context) => {
   }
 
   // 获取请求体
-  const bodyResult = ctx.request.body({ type: "json" });
-  const request: ChatCompletionRequest = await bodyResult.value;
+  const request = await ctx.request.body().value as ChatCompletionRequest;
 
   // 构造 Vertex AI HTTP payload
   const vertexAiEndpoint = `${VERTEX_AI_BASE_ENDPOINT}${request.model}:generateContent`;
